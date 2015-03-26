@@ -1,0 +1,64 @@
+
+
+Main functions:
+	useGoogle(database, symbol, minutes, days)
+		Parameters: string(database), string(stock symbol), integer(minutes > 0), integer(number of days < 15))
+			The database object is a MongoDB object, returned by pymongo.MongoClient()
+		Example: useGoogle('jpm', 'nyse', 1, 3) will return 60 second time chunks of JPM over a 3 day period
+
+
+
+Done:
+	Google API
+		Arbitrary time slice
+		Arbitrary time period
+		Stock symbol/Exchange
+		Translate POSIX time stamp -> Date / EST time
+		Open, Close, High, Low, Volume for time period
+		Volume for time period
+		Avg (close + high + low) / 3
+		Avg * Volume / Delta time - See to do
+		Dictionary format for MongoDB
+
+	MongoDB
+		It works!
+		Heirarchy:
+			Database->Collections->Documents
+			I think it is best to have a collection for each exchange and save each stock as a document with the time and info - WRONG! One collection to rule them all, arbitrarily named "Stock-History"
+
+			At a cost of efficiency, duplicate entries are ignored.
+			This is accomplished by searching to see if there is already an entry with the same symbol, time, and date, and then skipping it if that is true.
+			This allows the update to be run numerous times
+
+
+	Yahoo API - Sucks
+		Stock symbol
+		Translate POSIX time stamp -> Date / EST time
+		Open, Close, High, Low, Volume for time period
+		Delta time (since time period is not able to be specified by user)
+		Avg (close + high + low) / 3
+		Avg * Volume / Delta time -> 0 if start of day
+
+
+
+To Do:
+	Google API
+		Fix VWAT
+			Right now, VWAT is calculated with a cumulative volume over the time interval (how many days back you choose to look) - This causes the VWAT value to drop as time approaches the current time. Obviously, this is a bad practice. Maybe switch the cumulative volume container to reset at the beginning of each day?
+
+
+	GUI
+		PyQT - It works, need to install appropriate pyqt version, etc.
+		Currently the box allows you to enter a symbol, time slice, and time interval and will add it to the database.
+		There is now a tab system - The first tab handles input, and allows a certain stock and time period to be added to the database. The second tab handles operations performed on the database
+
+		
+	Functions:
+		Get average volume over a time period
+			Query time period, put it in an array
+			Sum volume, divide by time period
+			To Do:
+				Since day/month is periodic in a given year, I think the best option is to find the largest chunk of consecutive days (a full month, a full year), and do a query on that, then append the tails to that returned list.
+				Example: 3 month time span - Take the month in the middle, query all entries for that month. Then, search for all days within the previous month greater than the start day, and add it to the list. Search for all days in the following month less than the start day, and the list is complete. The same logic holds true for a multi-year span as well. 
+Can't do:
+	Yahoo arbitrary time slice / time period
