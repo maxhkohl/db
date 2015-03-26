@@ -19,8 +19,8 @@ class MyWindowClass(QtGui.QMainWindow, form_class):
         self.build.clicked.connect(self.build_it)
         self.avgVolBtn.clicked.connect(self.getAvgVol)
 
-    """def getAvgVol(self,database):
-        query = []
+    def getAvgVol(self,database):
+        """query = []
         lastMonth = 12
         lastDay = 21
         monthsPerYear = 12
@@ -130,6 +130,8 @@ def useGoogle(db,symbol, ts, ti):
     #Variable instantiation
     baseTime = 0
     cumulativeV = 0
+    cumulativeVP = 0
+    prevDay = 0
     collectionName = "Stock-History"
 
     #Sanitize input
@@ -179,22 +181,11 @@ def useGoogle(db,symbol, ts, ti):
         for i in range(4,len(line)):
             line[i] = float(line[i])
 
-        #Find average price over time interval
-        high = line[5]
-        low = line[6]
-        close = line[4]
-        avg = (high + low + close)/3
-        #Add it to the end of list
-        line.append(avg)
         volume = line[8]
         if volume == 0:
             #THIS IS BECAUSE VOLUME DATA IS NOT UPDATED FOR A FEW MINUTES!
             continue
         else:
-            #Add volume to cumulative volume
-            cumulativeV += volume
-            #Find VWAP (price * volume) / Cumulative volume
-            vwap = (avg*volume)/cumulativeV
             #Separate year month and day for future searching purposes
             date = line[2].split("-")
             year = date[0]
@@ -203,8 +194,30 @@ def useGoogle(db,symbol, ts, ti):
 
             #Check to see if there is an identical entry in the database, DONT ENTER IT IF THERE IS A MATCH!
             if (len(list(collection.find({"Time":line[3],"Year":year,"Month":month,"Day":day,"Symbol":line[0]})))) == 0:
+                #Find average price over time interval
+                high = line[5]
+                low = line[6]
+                close = line[4]
+                avg = (high + low + close)/3
+                #Add it to the end of list
+                #VWAP calculation
+                #Start with volume price (average price, that is)
+                vp = volume*avg
+                if prevDay == day:
+                    #Add volume to cumulative volume
+                    cumulativeV += volume
+                    cumulativeVP += vp
+                else:
+                    #It is a new day, start fresh
+                    cumulativeV = volume
+                    cumulativeVP = vp
+                    prevDay = day
+                #Find VWAP (price * volume) / Cumulative volume
+                vwap = cumulativeVP/cumulativeV
+                print str(cumulativeV) + "\t" + str(cumulativeVP) + "\t" + str(avg) + "\t" + str(vwap)
+
                 #Put it in a dictionary for Mongo use
-                doc = {"Symbol":line[0],"Exchange":line[1],"Year":year,"Month":month,"Day":day,"Time":line[3],"Close":line[4],"High":line[5],"Low":line[6],"Open":line[7],"Volume":line[8],"Average":line[9], "VWAP":vwap}
+                doc = {"Symbol":line[0],"Exchange":line[1],"Year":year,"Month":month,"Day":day,"Time":line[3],"Close":close,"High":high,"Low":low,"Open":line[7],"Volume":volume,"Average":avg, "VWAP":vwap}
                 collection.insert(doc)
                 #print "Added:\t" + line[0] + " time:\t" + line[3] + "\n"
                 counter = counter + 1
